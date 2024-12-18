@@ -1,6 +1,5 @@
 from flask import Flask, jsonify
 import os
-from lightfm import LightFM
 
 app = Flask(__name__)
 
