@@ -1,48 +1,58 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from recommend import popularity, CF, CB
 import os
-from food_manager import FoodManager
 
 app = Flask(__name__)
 CORS(app)
 
-DATA_FILE = "mock_data/matrix.json"
-
-if os.path.exists(DATA_FILE):
-    food_manager = FoodManager.load_from_json(DATA_FILE)
-else:
-    food_manager = FoodManager(
-        users=[], foods=[], islam_users=[], matrix=[]
-    )
-
-@app.route('/user/<string:user>', methods=['GET'])
-def get_user_preferences(user):
-    preferences = food_manager.get_user_preferences(user)
-    if preferences is None:
-        return jsonify({"error": "User not found"}), 404
-    
-    preferences = {food: int(value) for food, value in preferences.items()}
-    return jsonify({"user": user, "preferences": preferences})
-
-@app.route('/user', methods=['POST'])
-def add_or_update_user():
-    data = request.json
-    user = data.get("user")
-    food_preferences = data.get("preferences", {})
-    if not user:
-        return jsonify({"error": "User is required"}), 400
-
-    food_manager.add_or_update_user(user, food_preferences)
-    food_manager.save_to_json(DATA_FILE)
-    return jsonify({"message": f"User {user} added/updated successfully"})
-
 @app.route('/')
 def index():
-    return "Hello"
+    return jsonify({"message": "Welcome to the Food Recommendation API!"})
+
+# Popularity-based Recommendation Endpoint
+@app.route('/recommend/popularity', methods=['GET'])
+def recommend_popularity():
+    try:
+        result = popularity()
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Collaborative Filtering Recommendation Endpoint
+@app.route('/recommend/cf', methods=['POST'])
+def recommend_cf():
+    try:
+        data = request.json
+        if not data or 'food_name' not in data:
+            return jsonify({"error": "Please provide 'food_name' in the request body"}), 400
+
+        food_name = data['food_name']
+        result = CF(food_name)
+        return jsonify(result), 200
+    except ValueError as ve:
+        return jsonify({"error": f"Invalid input: {str(ve)}"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Content-Based Recommendation Endpoint
+@app.route('/recommend/cb', methods=['GET'])
+def recommend_cb():
+    try:
+        result = CB()
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return jsonify({"error": "Route not found"}), 404
 
 @app.teardown_appcontext
-def save_data_on_teardown(exception):
-    food_manager.save_to_json(DATA_FILE)
+def teardown_appcontext(exception):
+    if exception:
+        print(f"Teardown exception: {exception}")
 
 if __name__ == '__main__':
-    app.run(debug=True, port=os.getenv("PORT", default=5000))
+    port = int(os.getenv("PORT", 5000))
+    app.run(debug=True, port=port)
