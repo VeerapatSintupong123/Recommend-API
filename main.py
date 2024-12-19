@@ -45,7 +45,7 @@ def recommend_cb():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-@app.route('/allergy/food', method=['POST'])
+@app.route('/allergy/food', methods=['POST'])
 def allergy_food():
     try:
         data = request.json
@@ -60,7 +60,7 @@ def allergy_food():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-@app.route('/allergy/ingredient', method=['POST'])
+@app.route('/allergy/ingredient', methods=['POST'])
 def allergy_ingredient():
     try:
         data = request.json
